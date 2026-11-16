@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the automated stages of the verification gate locally.
-#   Stage I  - Scan:  Bandit static analysis on a target folder
+#   Stage I  - Scan:  Bandit and Semgrep on a target folder
 #   Stage II - Test:  pytest security tests
 # Stage III (human review) is manual; Stage IV (retest) is simply running
 # this script again after fixes are applied.
@@ -14,11 +14,17 @@ cd "$(dirname "$0")/.."
 
 echo "== Stage I: Scan ($TARGET) =="
 bandit -r "$TARGET"
-SCAN=$?
+BANDIT=$?
+semgrep scan --config .semgrep/rules.yml --error --metrics=off "$TARGET"
+SEMGREP=$?
+SCAN=0
+if [ "$BANDIT" -ne 0 ] || [ "$SEMGREP" -ne 0 ]; then
+  SCAN=1
+fi
 
 echo
 echo "== Stage II: Test =="
-python -m pytest -q tests
+python3 -m pytest -q tests
 TEST=$?
 
 echo

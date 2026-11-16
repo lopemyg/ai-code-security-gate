@@ -14,8 +14,8 @@ report, so that the demonstration in Section 3.4 can be reproduced.
 
 | Path | Purpose | Report section |
 |---|---|---|
-| `vulnerable/login_vulnerable.py` | Sample with SQL injection (CWE-89) and a hard-coded password (CWE-259/798) | 3.4 |
-| `fixed/login_fixed.py` | Corrected version: parameterized query, secret from the environment, allow-list validation | 3.4, 3.5 |
+| `vulnerable/login_vulnerable.py` | Sample with SQL injection (CWE-89), a hard-coded password that the login check actually uses (CWE-259/798), and a caller argument that is discarded (CWE-862) | 3.4 |
+| `fixed/login_fixed.py` | Corrected version: parameterized query, secret from the environment, allow-list validation, caller may read only their own row | 3.4, 3.5 |
 | `tests/test_injection.py` | Stage II security tests using the payload `x' OR '1'='1` on a three-row table | 3.1, 3.4 |
 | `.semgrep/rules.yml` | Local Semgrep rules mapped to rubric metrics (CWE-89, 798, 78, 94) | 3.1, 3.2 |
 | `.github/workflows/security-gate.yml` | CI pipeline running the gate on every pull request | 3.1 |
@@ -50,7 +50,7 @@ semgrep scan --config .semgrep/rules.yml --error fixed        # 0 findings, exit
 |---|---|---|
 | Bandit | B608 SQL injection (CWE-89, medium/low confidence), B105 hard-coded password (CWE-259, low/medium confidence). Exit 1 → **blocked** | No issues. Exit 0 |
 | Semgrep | 2 blocking findings. Exit 1 → **blocked** | 0 findings. Exit 0 |
-| Injection test | Returns all 3 rows (injection succeeds) | Input rejected; `alice` returns 1 row |
+| Injection test | Returns all 3 rows (injection succeeds). `actor="bob"` can still read alice | Input rejected; `alice` returns 1 row; a different caller raises `PermissionError` |
 
 ## Enforcing the gate on GitHub (Stage III)
 

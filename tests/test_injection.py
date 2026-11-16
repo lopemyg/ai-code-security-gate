@@ -50,3 +50,36 @@ def test_fixed_version_returns_correct_row(conn):
 
 def test_fixed_version_uses_environment_secret():
     assert "SuperSecret" not in (ROOT / "fixed" / "login_fixed.py").read_text()
+
+
+def test_vulnerable_version_ignores_the_caller(conn):
+    """Any actor can read any row. Scanners do not flag this."""
+    rows = login_vulnerable.get_user(conn, "alice", actor="bob")
+    assert len(rows) == 1
+    assert rows[0][1] == "alice"
+
+
+def test_fixed_version_rejects_cross_user_read(conn):
+    with pytest.raises(PermissionError):
+        login_fixed.get_user(conn, "alice", actor="bob")
+
+
+def test_fixed_version_allows_the_same_user(conn):
+    rows = login_fixed.get_user(conn, "alice", actor="alice")
+    assert len(rows) == 1
+    assert rows[0][1] == "alice"
+
+
+def test_vulnerable_password_check_accepts_hard_coded_secret():
+    assert login_vulnerable.check_password("SuperSecret123!") is True
+
+
+def test_fixed_password_check_reads_environment(monkeypatch):
+    monkeypatch.setenv("DB_PASSWORD", "from-the-environment")
+    import importlib
+
+    importlib.reload(login_fixed)
+    assert login_fixed.check_password("from-the-environment") is True
+    assert login_fixed.check_password("SuperSecret123!") is False
+    monkeypatch.delenv("DB_PASSWORD", raising=False)
+    importlib.reload(login_fixed)
