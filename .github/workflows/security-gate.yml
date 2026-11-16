@@ -1,0 +1,57 @@
+# Verification and Test Gate (Report Section 3.1, Table 2)
+#   Stage I   Scan   - Semgrep + Bandit static analysis
+#   Stage II  Test   - pytest security tests (SQL injection payload)
+#   Stage III Review - required human approval (branch protection, see README)
+#   Stage IV  Retest - this workflow re-runs automatically on every new push
+#
+# Mark the "gate" job as a required status check in branch protection so a
+# failing scan or test blocks the merge.
+name: security-gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  gate:
+    name: Gate (scan + test on application code)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+
+      - name: "Stage I - Scan: Semgrep (blocking)"
+        run: semgrep scan --config .semgrep/rules.yml --error --metrics=off fixed
+
+      - name: "Stage I - Scan: Bandit (blocking)"
+        run: bandit -r fixed
+
+      - name: "Stage II - Test: security tests"
+        run: python -m pytest -q tests
+
+  demo-blocked:
+    name: Demo (vulnerable sample must be blocked)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+
+      # The vulnerable sample is intentionally insecure. This job succeeds only
+      # if the scanners DO block it, proving the gate catches the flaws.
+      - name: Semgrep must report blocking findings
+        run: |
+          if semgrep scan --config .semgrep/rules.yml --error --metrics=off vulnerable; then
+            echo "Expected Semgrep to block the vulnerable sample" && exit 1
+          fi
+      - name: Bandit must report findings
+        run: |
+          if bandit -r vulnerable; then
+            echo "Expected Bandit to block the vulnerable sample" && exit 1
+          fi

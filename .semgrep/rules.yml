@@ -1,0 +1,66 @@
+# Local Semgrep rules for the verification gate (Stage I - Scan).
+# Each rule maps to a metric in the Security-Focused Pull-Request Review Rubric.
+rules:
+  - id: sql-injection-string-concat
+    message: >-
+      SQL query built with string concatenation or formatting from a variable.
+      Use a parameterized query instead. (Rubric: Injection Defense)
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A05:2025 - Injection"
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $Q = "..." + $X + ...
+              ...
+              $CONN.execute($Q, ...)
+          - pattern: $CONN.execute("..." + $X + ..., ...)
+          - pattern: $CONN.execute(f"...", ...)
+          - pattern: $CONN.execute("..." % $X, ...)
+          - pattern: $CONN.execute("...".format(...), ...)
+
+  - id: hard-coded-secret
+    message: >-
+      Secret assigned from a string literal. Load it from an environment
+      variable or a secrets manager. (Rubric: Hard-coded Secret Protection)
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      owasp: "A07:2025 - Authentication Failures"
+    patterns:
+      - pattern: $NAME = "$VALUE"
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: (?i).*(password|passwd|secret|api_?key|token|private_?key).*
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: .+
+
+  - id: os-command-injection
+    message: >-
+      Shell command run with shell=True or os.system. Pass arguments as a list
+      without a shell. (Rubric: Injection Defense)
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-78: OS Command Injection"
+      owasp: "A05:2025 - Injection"
+    pattern-either:
+      - pattern: os.system(...)
+      - pattern: subprocess.$F(..., shell=True, ...)
+
+  - id: code-injection-eval
+    message: >-
+      eval()/exec() executes code that may come from user input.
+      (Rubric: Injection Defense)
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-94: Code Injection"
+      owasp: "A05:2025 - Injection"
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
