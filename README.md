@@ -15,12 +15,12 @@ report, so that the demonstration in Section 3.4 can be reproduced.
 | Path | Purpose | Report section |
 |---|---|---|
 | `vulnerable/login_vulnerable.py` | Sample with SQL injection (CWE-89), a hard-coded password that the login check actually uses (CWE-259/798), and a caller argument that is discarded (CWE-862) | 3.4 |
-| `fixed/login_fixed.py` | Corrected version: parameterized query, secret from the environment, allow-list validation, caller may read only their own row | 3.4, 3.5 |
+| `fixed/login_fixed.py` | Corrected version: parameterized query, secret from the environment, allow-list validation. A supplied caller may read only their own row; a missing caller is still accepted | 3.4, 3.5 |
 | `tests/test_injection.py` | Stage II security tests using the payload `x' OR '1'='1` on a three-row table | 3.1, 3.4 |
 | `.semgrep/rules.yml` | Local Semgrep rules mapped to rubric metrics (CWE-89, 798, 78, 94) | 3.1, 3.2 |
 | `.github/workflows/security-gate.yml` | CI pipeline running the gate on every pull request | 3.1 |
 | `.github/pull_request_template.md` | AI-use disclosure, rubric scoring, and reviewer sign-off | 4.1–4.6 |
-| `docs/ANNOTATED_REVIEW.md` | Line-by-line review of the sample code against the rubric | 1.1, 2.2 |
+| `docs/ANNOTATED_REVIEW.md` | Why this sample was selected, how each line was scored against Table 1, and the resulting ratings | 3.4 |
 | `scripts/run_gate.sh` | Runs the scan and test stages locally | 3.4 |
 
 ## The verification gate
